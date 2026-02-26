@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC Door Tags – Digitale Türdokumentation</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+            background: #0a0a0a;
+            color: #fafafa;
+            overflow: hidden;
+        }
+        
+        .presentation-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        .slides {
+            display: flex;
+            width: calc(100% * 11);
+            height: 100%;
+            transition: transform 0.5s ease-in-out;
+        }
+        
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .slide h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #22d3ee;
+            line-height: 1.2;
+        }
+        
+        .slide h2 {
+            font-size: 2.8rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #22d3ee;
+        }
+        
+        .slide h3 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #fafafa;
+        }
+        
+        .slide p {
+            font-size: 1.4rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+            max-width: 800px;
+        }
+        
+        .slide ul {
+            font-size: 1.3rem;
+            line-height: 1.8;
+            list-style: none;
+            max-width: 900px;
+        }
+        
+        .slide li {
+            margin: 0.8rem 0;
+            padding-left: 2rem;
+            position: relative;
+        }
+        
+        .slide li:before {
+            content: "→";
+            color: #22d3ee;
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+        
+        .subtitle {
+            font-size: 1.6rem;
+            color: #a1a1aa;
+            font-weight: 300;
+            margin-top: 0.5rem;
+        }
+        
+        .big-emoji {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        .highlight {
+            background: linear-gradient(135deg, #22d3ee, #0891b2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .tech-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+            font-size: 1.2rem;
+        }
+        
+        .tech-step {
+            padding: 1rem 2rem;
+            border: 2px solid #22d3ee;
+            border-radius: 12px;
+            color: #22d3ee;
+        }
+        
+        .arrow {
+            color: #22d3ee;
+            font-size: 2rem;
+        }
+        
+        .demo-links {
+            display: flex;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .demo-link {
+            padding: 1rem 2rem;
+            background: #22d3ee;
+            color: #0a0a0a;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .demo-link:hover {
+            background: #0891b2;
+            transform: translateY(-2px);
+        }
+        
+        .business-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            max-width: 800px;
+            margin: 2rem 0;
+        }
+        
+        .business-item {
+            background: rgba(34, 211, 238, 0.1);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #22d3ee;
+        }
+        
+        .business-item h4 {
+            color: #22d3ee;
+            margin-bottom: 0.5rem;
+        }
+        
+        .roadmap-phases {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1000px;
+            margin: 2rem 0;
+        }
+        
+        .phase {
+            flex: 1;
+            text-align: center;
+            padding: 0 1rem;
+        }
+        
+        .phase-number {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #22d3ee;
+            color: #0a0a0a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin: 0 auto 1rem;
+            font-size: 1.5rem;
+        }
+        
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #374151;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .nav-dot.active {
+            background: #22d3ee;
+        }
+        
+        .slide-counter {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            font-size: 1rem;
+            color: #a1a1aa;
+            z-index: 1000;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .slide {
+                padding: 20px;
+            }
+            
+            .slide h1 {
+                font-size: 2.5rem;
+            }
+            
+            .slide h2 {
+                font-size: 2rem;
+            }
+            
+            .slide h3 {
+                font-size: 1.5rem;
+            }
+            
+            .slide p, .slide ul {
+                font-size: 1.1rem;
+            }
+            
+            .tech-flow {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .demo-links {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .roadmap-phases {
+                flex-direction: column;
+                gap: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation-container">
+        <div class="slides" id="slides">
+            <!-- Slide 1: Titel -->
+            <div class="slide">
+                <div class="big-emoji">🚪</div>
+                <h1>NFC Door Tags</h1>
+                <p class="subtitle">Digitale Türdokumentation für die moderne Schreinerei</p>
+                <p style="margin-top: 2rem; font-size: 1.2rem; color: #a1a1aa;">
+                    Von der Papier-Dokumentation zur smarten digitalen Lösung
+                </p>
+            </div>
+            
+            <!-- Slide 2: Problem -->
+            <div class="slide">
+                <div class="big-emoji">❌</div>
+                <h2>Das Problem</h2>
+                <ul>
+                    <li>Papier-Türschilder sind statisch und unvollständig</li>
+                    <li>Türdokumentation ist oft veraltet oder fehlt komplett</li>
+                    <li>Monteure verlieren Zeit beim Suchen von Informationen</li>
+                    <li>Brandschutz-Inspektoren haben keinen schnellen Zugriff auf VKF-Daten</li>
+                    <li>Facility Manager jonglieren mit verschiedenen Systemen</li>
+                    <li>Manueller Aufwand bei jedem Projekt-Update</li>
+                </ul>
+            </div>
+            
+            <!-- Slide 3: Lösung -->
+            <div class="slide">
+                <div class="big-emoji">✨</div>
+                <h2>Die Lösung</h2>
+                <h3>NFC-Sticker + Webbasiertes Türdatenblatt</h3>
+                <div class="tech-flow">
+                    <div class="tech-step">📱 Smartphone</div>
+                    <div class="arrow">→</div>
+                    <div class="tech-step">🔗 NFC-Tag</div>
+                    <div class="arrow">→</div>
+                    <div class="tech-step">📋 Digitales Datenblatt</div>
+                </div>
+                <p>Sofortiger Zugriff auf alle Türinformationen: Maße, Material, Brandschutzklasse, VKF-Nummer, Wartungshistorie und mehr.</p>
+            </div>
+            
+            <!-- Slide 4: Demo -->
+            <div class="slide">
+                <div class="big-emoji">🚀</div>
+                <h2>Was bereits existiert</h2>
+                <ul>
+                    <li>GitHub Pages Viewer für Türdatenblätter</li>
+                    <li>URL-Parameter System für alle Türdaten</li>
+                    <li>Mobile-optimierte Darstellung</li>
+                    <li>Dark Theme für bessere Lesbarkeit</li>
+                </ul>
+                <div class="demo-links">
+                    <a href="https://mcmuff86.github.io/nfc-door-tags/door-tag.html" class="demo-link" target="_blank">
+                        🌐 Live Demo
+                    </a>
+                    <a href="https://github.com/McMuff86/nfc-door-tags" class="demo-link" target="_blank">
+                        📁 GitHub Repo
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Slide 5: Technik -->
+            <div class="slide">
+                <div class="big-emoji">⚙️</div>
+                <h2>Wie funktioniert's?</h2>
+                <div style="text-align: left; max-width: 700px;">
+                    <h3 style="color: #22d3ee; margin-bottom: 1rem;">🔗 NFC → URL → Datenblatt</h3>
+                    <p><strong>Tag-Typen:</strong> NTAG215 (504 Byte) für Standard-Türen</p>
+                    <p><strong>Reichweite:</strong> 2-5cm je nach Tag-Größe</p>
+                    <p><strong>Materialien:</strong> Holz ✅, HDF ⚠️ (größere Tags), Metall (Anti-Metal Tags)</p>
+                    <p><strong>Haltbarkeit:</strong> 10+ Jahre indoor, IP68 für Außenbereich</p>
+                    <p><strong>Kompatibilität:</strong> iPhone 7+ und die meisten Android-Geräte</p>
+                </div>
+            </div>
+            
+            <!-- Slide 6: Use Cases -->
+            <div class="slide">
+                <div class="big-emoji">👥</div>
+                <h2>Use Cases</h2>
+                <div class="business-grid">
+                    <div class="business-item">
+                        <h4>🔧 Monteur</h4>
+                        <p>Bandseite, Schloss-Typ, Maße – sofort verfügbar</p>
+                    </div>
+                    <div class="business-item">
+                        <h4>🔥 Brandschutz-Inspektor</h4>
+                        <p>VKF-Nummer, Klassierung, Prüfhistorie</p>
+                    </div>
+                    <div class="business-item">
+                        <h4>🏢 Hauswart</h4>
+                        <p>Tür-ID für Helpdesk, Wartungshistorie</p>
+                    </div>
+                    <div class="business-item">
+                        <h4>📊 Facility Manager</h4>
+                        <p>Zentrale Gebäudedaten, Asset-Management</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Slide 7: IFCraft Integration -->
+            <div class="slide">
+                <div class="big-emoji">🏗️</div>
+                <h2>IFCraft-Integration</h2>
+                <h3 class="highlight">Das ist unser USP!</h3>
+                <div class="tech-flow">
+                    <div class="tech-step">📐 BIM/IFC</div>
+                    <div class="arrow">→</div>
+                    <div class="tech-step">🔄 IFCraft Parser</div>
+                    <div class="arrow">→</div>
+                    <div class="tech-step">🔗 NFC URLs</div>
+                    <div class="arrow">→</div>
+                    <div class="tech-step">📝 Batch-Writing</div>
+                </div>
+                <ul>
+                    <li>Automatische URL-Generierung aus BIM-Daten</li>
+                    <li>Konsistenz zwischen Planung und Realität</li>
+                    <li>Skalierung auf große Projekte (100+ Türen)</li>
+                    <li>Single Source of Truth</li>
+                </ul>
+            </div>
+            
+            <!-- Slide 8: Markt & Konkurrenz -->
+            <div class="slide">
+                <div class="big-emoji">📈</div>
+                <h2>Markt & Konkurrenz</h2>
+                <div style="text-align: left; max-width: 800px;">
+                    <h3 style="color: #22d3ee;">🎯 Marktlücke identifiziert!</h3>
+                    <ul>
+                        <li><strong>Dormakaba, ASSA ABLOY:</strong> Fokus auf Zutrittskontrolle, nicht Info-Tags</li>
+                        <li><strong>QR-Code Lösungen:</strong> Langsamer, wetterabhängig, unschön</li>
+                        <li><strong>FM-Tools:</strong> Generische Asset-Verwaltung, keine Türspezialisierung</li>
+                        <li><strong>Schreinereien:</strong> Digitalisierungsdruck, aber keine Lösungen</li>
+                    </ul>
+                    <p style="margin-top: 1rem; color: #22d3ee;"><strong>Kein spezialisierter NFC Door Tags Anbieter im DACH-Raum!</strong></p>
+                </div>
+            </div>
+            
+            <!-- Slide 9: Business Model -->
+            <div class="slide">
+                <div class="big-emoji">💰</div>
+                <h2>Business Model</h2>
+                <div class="business-grid">
+                    <div class="business-item">
+                        <h4>💡 Pro-Tür Initial</h4>
+                        <p>CHF 70-135<br>Hardware + Installation</p>
+                    </div>
+                    <div class="business-item">
+                        <h4>🔄 SaaS Recurring</h4>
+                        <p>CHF 5-10/Jahr pro Tür<br>Platform-Access</p>
+                    </div>
+                    <div class="business-item">
+                        <h4>🏢 Enterprise</h4>
+                        <p>CHF 500-1000/Monat<br>FM-Integration</p>
+                    </div>
+                    <div class="business-item">
+                        <h4>🤝 Revenue-Share</h4>
+                        <p>20-30%<br>mit Schreinerei-Partnern</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Slide 10: Roadmap -->
+            <div class="slide">
+                <div class="big-emoji">🗺️</div>
+                <h2>Roadmap</h2>
+                <div class="roadmap-phases">
+                    <div class="phase">
+                        <div class="phase-number">1</div>
+                        <h3>PoC Phase</h3>
+                        <p><strong>Jetzt - Q2 2026</strong></p>
+                        <p>Obsthof Pilot, Hardware-Tests, erste Partner</p>
+                    </div>
+                    <div class="phase">
+                        <div class="phase-number">2</div>
+                        <h3>IFCraft Integration</h3>
+                        <p><strong>Q3-Q4 2026</strong></p>
+                        <p>Automatische URL-Gen, FM-APIs, Skalierung</p>
+                    </div>
+                    <div class="phase">
+                        <div class="phase-number">3</div>
+                        <h3>SaaS Produkt</h3>
+                        <p><strong>2027+</strong></p>
+                        <p>Multi-Tenant, Enterprise, DACH-Expansion</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Slide 11: Next Steps -->
+            <div class="slide">
+                <div class="big-emoji">🎯</div>
+                <h2>Next Steps</h2>
+                <ul style="font-size: 1.5rem; line-height: 2;">
+                    <li><strong>1.</strong> Hardware-Upgrade: 38-40mm Tags testen (HDF-Penetration)</li>
+                    <li><strong>2.</strong> Partner-Gespräche: 3-5 Schreinereien für Pilot kontaktieren</li>
+                    <li><strong>3.</strong> VKF-Compliance: Rechtliche Abklärung Hybrid-Lösung</li>
+                    <li><strong>4.</strong> IFCraft-Pipeline: Automatische URL-Generierung entwickeln</li>
+                    <li><strong>5.</strong> Field Testing: Verschiedene Smartphone-Modelle validieren</li>
+                </ul>
+                <p style="margin-top: 2rem; color: #22d3ee; font-size: 1.3rem;">
+                    <strong>Ziel: 10+ erfolgreiche Pilottüren bis Ende Q2 2026</strong>
+                </p>
+            </div>
+        </div>
+        
+        <!-- Navigation -->
+        <div class="navigation" id="navigation">
+            <!-- Dots will be generated by JavaScript -->
+        </div>
+        
+        <!-- Slide Counter -->
+        <div class="slide-counter" id="slideCounter">
+            1 / 11
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const totalSlides = 11;
+        const slides = document.getElementById('slides');
+        const navigation = document.getElementById('navigation');
+        const slideCounter = document.getElementById('slideCounter');
+
+        // Generate navigation dots
+        for (let i = 0; i < totalSlides; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'nav-dot';
+            if (i === 0) dot.classList.add('active');
+            dot.addEventListener('click', () => goToSlide(i));
+            navigation.appendChild(dot);
+        }
+
+        function updateSlide() {
+            slides.style.transform = `translateX(-${currentSlide * 100}vw)`;
+            
+            // Update navigation dots
+            document.querySelectorAll('.nav-dot').forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentSlide);
+            });
+            
+            // Update slide counter
+            slideCounter.textContent = `${currentSlide + 1} / ${totalSlides}`;
+        }
+
+        function goToSlide(slideIndex) {
+            currentSlide = slideIndex;
+            updateSlide();
+        }
+
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % totalSlides;
+            updateSlide();
+        }
+
+        function prevSlide() {
+            currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+            updateSlide();
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+
+        // Touch/swipe navigation
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const diff = touchStartX - touchEndX;
+            
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0) {
+                    nextSlide(); // Swipe left = next slide
+                } else {
+                    prevSlide(); // Swipe right = previous slide
+                }
+            }
+        }
+    </script>
+</body>
+</html>
