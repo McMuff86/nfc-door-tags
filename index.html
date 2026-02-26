@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>NFC Door Tag Generator</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --card: #18181b;
+    --border: #27272a;
+    --input-bg: #09090b;
+    --text: #fafafa;
+    --muted: #a1a1aa;
+    --accent: #22d3ee;
+    --accent-dim: rgba(34,211,238,0.15);
+    --red: #ef4444;
+    --green: #22c55e;
+    --yellow: #eab308;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, 'Inter', 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 16px;
+    padding-bottom: 100px;
+  }
+  .header {
+    text-align: center;
+    padding: 20px 0 8px;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .header .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin: 16px 0;
+    background: var(--card);
+    border-radius: 10px;
+    padding: 4px;
+  }
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab.active {
+    background: var(--accent-dim);
+    color: var(--accent);
+  }
+  .section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .section.active { display: block; }
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .field {
+    margin-bottom: 14px;
+  }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 15px;
+    color: var(--text);
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--accent);
+  }
+  .field select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a1a1aa'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+  .field textarea {
+    resize: vertical;
+    min-height: 60px;
+  }
+  .row {
+    display: flex;
+    gap: 10px;
+  }
+  .row .field { flex: 1; }
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .toggle-row:last-child { border-bottom: none; }
+  .toggle-row label {
+    font-size: 14px;
+    color: var(--text);
+  }
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+  }
+  .toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .toggle .slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle .slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    background: var(--text);
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .toggle input:checked + .slider {
+    background: var(--accent);
+  }
+  .toggle input:checked + .slider::before {
+    transform: translateX(20px);
+  }
+
+  /* Byte counter */
+  .byte-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    z-index: 100;
+  }
+  .byte-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .byte-info .label {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .byte-info .count {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .byte-info .count.ok { color: var(--green); }
+  .byte-info .count.warn { color: var(--yellow); }
+  .byte-info .count.over { color: var(--red); }
+  .progress {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.3s, background 0.3s;
+  }
+  .progress-fill.ok { background: var(--green); }
+  .progress-fill.warn { background: var(--yellow); }
+  .progress-fill.over { background: var(--red); }
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .btn:active { opacity: 0.7; }
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+  }
+  .btn-secondary {
+    background: var(--border);
+    color: var(--text);
+  }
+  .btn-danger {
+    background: rgba(239,68,68,0.15);
+    color: var(--red);
+    border: 1px solid rgba(239,68,68,0.3);
+  }
+
+  /* Preview modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 200;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  .modal-overlay.show { display: block; }
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  .modal h2 {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .url-box {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    color: var(--accent);
+    word-break: break-all;
+    line-height: 1.5;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+  }
+  .toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: var(--green);
+    color: #000;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 300;
+    transition: transform 0.3s;
+  }
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Templates */
+  .template-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .template-card {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .template-card:hover {
+    border-color: var(--accent);
+  }
+  .template-card .emoji {
+    font-size: 24px;
+    margin-bottom: 4px;
+  }
+  .template-card .name {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .template-card .desc {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🚪 NFC Door Tag</h1>
+  <div class="subtitle">Generator – Türdaten → NFC URL</div>
+</div>
+
+<!-- Templates -->
+<div class="section active" id="sec-templates" style="display:block">
+  <div class="section-title">📋 Vorlage wählen oder leer starten</div>
+  <div class="template-grid">
+    <div class="template-card" onclick="loadTemplate('ei30')">
+      <div class="emoji">🔥</div>
+      <div class="name">Brandschutztür EI30</div>
+      <div class="desc">Holz, Stahlzarge, VKF</div>
+    </div>
+    <div class="template-card" onclick="loadTemplate('standard')">
+      <div class="emoji">🚪</div>
+      <div class="name">Standard Innentür</div>
+      <div class="desc">Holz, einfach</div>
+    </div>
+    <div class="template-card" onclick="loadTemplate('slide')">
+      <div class="emoji">↔️</div>
+      <div class="name">Schiebetür</div>
+      <div class="desc">Glas oder Holz</div>
+    </div>
+    <div class="template-card" onclick="loadTemplate('entry')">
+      <div class="emoji">🏠</div>
+      <div class="name">Haustür</div>
+      <div class="desc">Alu, Sicherheit</div>
+    </div>
+    <div class="template-card" onclick="loadTemplate('wet')">
+      <div class="emoji">🚿</div>
+      <div class="name">Nasszelle</div>
+      <div class="desc">Feuchtraum</div>
+    </div>
+    <div class="template-card" onclick="loadTemplate('empty')">
+      <div class="emoji">✏️</div>
+      <div class="name">Leer</div>
+      <div class="desc">Alles selbst eintragen</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab Navigation -->
+<div class="tabs">
+  <div class="tab active" data-tab="ident">🏷️ ID</div>
+  <div class="tab" data-tab="masse">📐 Masse</div>
+  <div class="tab" data-tab="brand">🔥 Brand</div>
+  <div class="tab" data-tab="ausstattung">🔧 Detail</div>
+  <div class="tab" data-tab="projekt">📋 Projekt</div>
+</div>
+
+<!-- Tab: Identifikation -->
+<div class="section active" id="sec-ident">
+  <div class="section-title">🏷️ Identifikation</div>
+  <div class="field">
+    <label>Tür-ID *</label>
+    <input type="text" id="f-id" placeholder="OH1-EG-T101" oninput="updateUrl()">
+  </div>
+  <div class="field">
+    <label>Türtyp</label>
+    <select id="f-dtype" onchange="updateUrl()">
+      <option value="">— wählen —</option>
+      <option value="Holz 1-flüglig">Holz 1-flüglig</option>
+      <option value="Holz 2-flüglig">Holz 2-flüglig</option>
+      <option value="Alu 1-flüglig">Alu 1-flüglig</option>
+      <option value="Alu 2-flüglig">Alu 2-flüglig</option>
+      <option value="Schiebetür">Schiebetür</option>
+      <option value="Glas">Glas</option>
+      <option value="Stahl">Stahl</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Status</label>
+    <select id="f-status" onchange="updateUrl()">
+      <option value="OK">✅ OK</option>
+      <option value="Pendenz">⚠️ Pendenz</option>
+      <option value="Montage">🔧 Montage</option>
+      <option value="Kontrolle">🔍 Kontrolle</option>
+    </select>
+  </div>
+</div>
+
+<!-- Tab: Masse -->
+<div class="section" id="sec-masse">
+  <div class="section-title">📐 Masse (Lichtmass in mm)</div>
+  <div class="row">
+    <div class="field">
+      <label>Breite (mm)</label>
+      <input type="number" id="f-b" placeholder="900" oninput="updateUrl()">
+    </div>
+    <div class="field">
+      <label>Höhe (mm)</label>
+      <input type="number" id="f-h" placeholder="2100" oninput="updateUrl()">
+    </div>
+  </div>
+  <div class="row">
+    <div class="field">
+      <label>Wandstärke (mm)</label>
+      <input type="number" id="f-wall" placeholder="120" oninput="updateUrl()">
+    </div>
+    <div class="field">
+      <label>Bandseite</label>
+      <select id="f-hinge" onchange="updateUrl()">
+        <option value="">— wählen —</option>
+        <option value="Links">Links (DIN L)</option>
+        <option value="Rechts">Rechts (DIN R)</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- Tab: Brandschutz -->
+<div class="section" id="sec-brand">
+  <div class="section-title">🔥 Brandschutz</div>
+  <div class="field">
+    <label>Brandschutz-Klassierung</label>
+    <select id="f-fire" onchange="updateUrl()">
+      <option value="">Kein Brandschutz</option>
+      <option value="EI30">EI 30</option>
+      <option value="EI60">EI 60</option>
+      <option value="EI90">EI 90</option>
+      <option value="E30">E 30</option>
+      <option value="E60">E 60</option>
+      <option value="El30">El 30 (Lüftung)</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>VKF-Nummer</label>
+    <input type="text" id="f-vkf" placeholder="VKF-24891" oninput="updateUrl()">
+  </div>
+  <div class="field">
+    <label>Prüfbericht</label>
+    <input type="text" id="f-report" placeholder="PB-2024-1132" oninput="updateUrl()">
+  </div>
+  <div class="field">
+    <label>Nächste Kontrolle</label>
+    <input type="month" id="f-inspect" oninput="updateUrl()">
+  </div>
+</div>
+
+<!-- Tab: Ausstattung -->
+<div class="section" id="sec-ausstattung">
+  <div class="section-title">🔧 Ausstattung</div>
+  <div class="field">
+    <label>Material</label>
+    <input type="text" id="f-mat" placeholder="Eiche furniert" oninput="updateUrl()">
+  </div>
+  <div class="field">
+    <label>Oberfläche</label>
+    <input type="text" id="f-surf" placeholder="Lackiert RAL 9010" oninput="updateUrl()">
+  </div>
+  <div class="field">
+    <label>Schloss</label>
+    <input type="text" id="f-lock" placeholder="BKS Einsteckschloss" oninput="updateUrl()">
+  </div>
+  <div class="field">
+    <label>Drücker</label>
+    <input type="text" id="f-handle" placeholder="FSB 1023" oninput="updateUrl()">
+  </div>
+  <div class="field">
+    <label>Zarge</label>
+    <input type="text" id="f-frame" placeholder="Stahlzarge Hörmann" oninput="updateUrl()">
+  </div>
+  <div class="field">
+    <label>Schwelle</label>
+    <input type="text" id="f-thresh" placeholder="Absenkdichtung" oninput="updateUrl()">
+  </div>
+</div>
+
+<!-- Tab: Projekt -->
+<div class="section" id="sec-projekt">
+  <div class="section-title">📋 Projekt & Standort</div>
+  <div class="field">
+    <label>Projekt</label>
+    <input type="text" id="f-project" placeholder="Obsthof Ballwil" oninput="updateUrl()">
+  </div>
+  <div class="row">
+    <div class="field">
+      <label>Gebäude</label>
+      <input type="text" id="f-building" placeholder="Obsthof 1" oninput="updateUrl()">
+    </div>
+    <div class="field">
+      <label>Geschoss</label>
+      <select id="f-floor" onchange="updateUrl()">
+        <option value="">— wählen —</option>
+        <option value="UG2">UG2</option>
+        <option value="UG1">UG1</option>
+        <option value="EG">EG</option>
+        <option value="OG1">OG1</option>
+        <option value="OG2">OG2</option>
+        <option value="OG3">OG3</option>
+        <option value="DG">DG</option>
+      </select>
+    </div>
+  </div>
+  <div class="field">
+    <label>Raum</label>
+    <input type="text" id="f-room" placeholder="Korridor" oninput="updateUrl()">
+  </div>
+  <div class="field">
+    <label>Auftragsnummer</label>
+    <input type="text" id="f-order" placeholder="25.1132-101" oninput="updateUrl()">
+  </div>
+  <div class="field">
+    <label>Hinweise</label>
+    <textarea id="f-notes" placeholder="Fluchtweg, Selbstschliesser etc." oninput="updateUrl()"></textarea>
+  </div>
+</div>
+
+<!-- Byte Counter + Buttons (fixed bottom) -->
+<div class="byte-bar">
+  <div class="byte-info">
+    <span class="label">URL-Grösse</span>
+    <span class="count ok" id="byteCount">0 / 504 Byte</span>
+  </div>
+  <div class="progress">
+    <div class="progress-fill ok" id="byteProgress" style="width:0%"></div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="showPreview()">👁️ Preview</button>
+    <button class="btn btn-primary" onclick="copyUrl()">📋 URL kopieren</button>
+    <button class="btn btn-danger" onclick="resetAll()">🗑️</button>
+  </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal-overlay" id="previewModal">
+  <div class="modal">
+    <h2>🔗 Generierte NFC-URL</h2>
+    <div class="url-box" id="urlDisplay"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="copyUrl()">📋 Kopieren</button>
+      <button class="btn btn-secondary" onclick="openPreview()">🚪 Vorschau öffnen</button>
+    </div>
+    <div style="margin-top:12px">
+      <button class="btn btn-secondary" style="width:100%" onclick="closePreview()">Schliessen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">✅ URL kopiert!</div>
+
+<script>
+const BASE = 'https://mcmuff86.github.io/nfc-door-tags/door-tag.html';
+const MAX_BYTES = 504;
+
+const fields = [
+  { id: 'f-id', param: 'id' },
+  { id: 'f-dtype', param: 'dtype' },
+  { id: 'f-status', param: 'status' },
+  { id: 'f-b', param: 'b' },
+  { id: 'f-h', param: 'h' },
+  { id: 'f-wall', param: 'wall' },
+  { id: 'f-hinge', param: 'hinge' },
+  { id: 'f-fire', param: 'fire' },
+  { id: 'f-vkf', param: 'vkf' },
+  { id: 'f-report', param: 'report' },
+  { id: 'f-inspect', param: 'inspect' },
+  { id: 'f-mat', param: 'mat' },
+  { id: 'f-surf', param: 'surf' },
+  { id: 'f-lock', param: 'lock' },
+  { id: 'f-handle', param: 'handle' },
+  { id: 'f-frame', param: 'frame' },
+  { id: 'f-thresh', param: 'thresh' },
+  { id: 'f-project', param: 'project' },
+  { id: 'f-building', param: 'building' },
+  { id: 'f-floor', param: 'floor' },
+  { id: 'f-room', param: 'room' },
+  { id: 'f-order', param: 'order' },
+  { id: 'f-notes', param: 'notes' },
+];
+
+function buildUrl() {
+  const params = new URLSearchParams();
+  for (const f of fields) {
+    const el = document.getElementById(f.id);
+    const val = el.value.trim();
+    if (val && !(f.param === 'status' && val === 'OK')) {
+      params.set(f.param, val);
+    }
+  }
+  const qs = params.toString();
+  return qs ? `${BASE}?${qs}` : BASE;
+}
+
+function getByteLength(str) {
+  return new TextEncoder().encode(str).length;
+}
+
+function updateUrl() {
+  const url = buildUrl();
+  const bytes = getByteLength(url);
+  const pct = Math.min((bytes / MAX_BYTES) * 100, 100);
+  
+  const countEl = document.getElementById('byteCount');
+  const barEl = document.getElementById('byteProgress');
+  
+  countEl.textContent = `${bytes} / ${MAX_BYTES} Byte`;
+  barEl.style.width = pct + '%';
+  
+  let cls = 'ok';
+  if (bytes > MAX_BYTES) cls = 'over';
+  else if (bytes > MAX_BYTES * 0.85) cls = 'warn';
+  
+  countEl.className = 'count ' + cls;
+  barEl.className = 'progress-fill ' + cls;
+}
+
+// Tab navigation
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const target = tab.dataset.tab;
+    document.querySelectorAll('.section').forEach(s => {
+      if (s.id === 'sec-templates') return; // always visible
+      s.classList.toggle('active', s.id === 'sec-' + target);
+    });
+  });
+});
+
+function showPreview() {
+  document.getElementById('urlDisplay').textContent = buildUrl();
+  document.getElementById('previewModal').classList.add('show');
+}
+
+function closePreview() {
+  document.getElementById('previewModal').classList.remove('show');
+}
+
+function openPreview() {
+  window.open(buildUrl(), '_blank');
+}
+
+function copyUrl() {
+  const url = buildUrl();
+  navigator.clipboard.writeText(url).then(() => {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+    closePreview();
+  });
+}
+
+function resetAll() {
+  if (!confirm('Alle Felder zurücksetzen?')) return;
+  fields.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = '';
+  });
+  document.getElementById('f-status').value = 'OK';
+  updateUrl();
+}
+
+function setField(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+
+function loadTemplate(tpl) {
+  resetAllSilent();
+  
+  const templates = {
+    ei30: {
+      'f-dtype': 'Holz 1-flüglig',
+      'f-fire': 'EI30',
+      'f-b': '900',
+      'f-h': '2100',
+      'f-wall': '180',
+      'f-mat': 'Eiche furniert',
+      'f-surf': 'Lackiert RAL 9010',
+      'f-lock': 'Panikschloss BKS',
+      'f-handle': 'FSB 1023',
+      'f-frame': 'Stahlzarge',
+      'f-thresh': 'Absenkdichtung',
+    },
+    standard: {
+      'f-dtype': 'Holz 1-flüglig',
+      'f-b': '800',
+      'f-h': '2100',
+      'f-wall': '120',
+      'f-mat': 'Buche CPL',
+      'f-surf': 'Weiss RAL 9016',
+      'f-lock': 'BBS Einsteckschloss',
+      'f-handle': 'FSB 1076',
+      'f-frame': 'Holzzarge',
+      'f-thresh': 'Keine',
+    },
+    slide: {
+      'f-dtype': 'Schiebetür',
+      'f-b': '1200',
+      'f-h': '2100',
+      'f-wall': '120',
+      'f-mat': 'Glas ESG 8mm',
+      'f-surf': 'Satiniert',
+      'f-lock': 'Muschelgriff',
+      'f-frame': 'Alu-Führung',
+    },
+    entry: {
+      'f-dtype': 'Alu 1-flüglig',
+      'f-fire': 'E30',
+      'f-b': '1100',
+      'f-h': '2200',
+      'f-wall': '300',
+      'f-mat': 'Aluminium',
+      'f-surf': 'Eloxiert E6/EV1',
+      'f-lock': 'Motorschloss KABA',
+      'f-handle': 'Stossgriff 600mm',
+      'f-frame': 'Alu thermisch getrennt',
+      'f-thresh': 'Schwelle 20mm',
+    },
+    wet: {
+      'f-dtype': 'Holz 1-flüglig',
+      'f-b': '700',
+      'f-h': '2100',
+      'f-wall': '100',
+      'f-mat': 'HPL Feuchtraum',
+      'f-surf': 'Weiss glatt',
+      'f-lock': 'WC-Schloss',
+      'f-handle': 'U-Form Edelstahl',
+      'f-frame': 'Alu-Umfassungszarge',
+      'f-thresh': 'Keine',
+    },
+    empty: {}
+  };
+
+  const data = templates[tpl] || {};
+  for (const [id, val] of Object.entries(data)) {
+    setField(id, val);
+  }
+  document.getElementById('f-status').value = 'OK';
+  updateUrl();
+  
+  // Hide templates, show form
+  document.getElementById('sec-templates').style.display = 'none';
+}
+
+function resetAllSilent() {
+  fields.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = '';
+  });
+}
+
+// Init
+updateUrl();
+</script>
+</body>
+</html>
